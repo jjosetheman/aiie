@@ -4,6 +4,9 @@
 #include <Arduino.h>
 #include "physicaldisplay.h"
 
+#include "SPI.h"
+#include "ILI9341_t3.h"
+
 #define TEENSY_DHEIGHT 240
 #define TEENSY_DWIDTH 320
 
@@ -25,7 +28,7 @@ enum {
 #define cport(port, data) port &= data
 #define sport(port, data) port |= data
 
-#define swap(type, i, j) {type t = i; i = j; j = t;}
+#define vswap(type, i, j) {type t = i; i = j; j = t;}
 
 class UTFT;
 class BIOS;
@@ -47,10 +50,6 @@ class TeensyDisplay : public PhysicalDisplay {
 
   virtual void drawImageOfSizeAt(const uint8_t *img, uint16_t sizex, uint8_t sizey, uint16_t wherex, uint8_t wherey);
 
- protected:
-  void moveTo(uint16_t col, uint16_t row);
-  void drawNextPixel(uint16_t color);
-
  private:
   regtype                 *P_RS, *P_WR, *P_CS, *P_RST, *P_SDA, *P_SCL, *P_ALE;
   regsize                 B_RS, B_WR, B_CS, B_RST, B_SDA, B_SCL, B_ALE;
@@ -65,7 +64,6 @@ class TeensyDisplay : public PhysicalDisplay {
   void setColor(byte r, byte g, byte b);
   void setColor(uint16_t color);
   void fillRect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
-  virtual void drawPixel(uint16_t x, uint16_t y);
   virtual void drawPixel(uint16_t x, uint16_t y, uint16_t color);
   virtual void drawPixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b);
 
@@ -78,6 +76,9 @@ class TeensyDisplay : public PhysicalDisplay {
   bool needsRedraw;
   bool driveIndicator[2];
   bool driveIndicatorDirty;
+
+  uint16_t selectedColor;
+
 };
 
 #endif

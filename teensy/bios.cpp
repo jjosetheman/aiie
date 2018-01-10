@@ -342,9 +342,8 @@ void BIOS::DrawMainMenu(int8_t selection)
   // draw the volume bar
   uint16_t volCutoff = 300.0 * (float)((float) g_volume / 15.0);
   for (uint8_t y=234; y<=235; y++) {
-    ((TeensyDisplay *)g_display)->moveTo(10, y);
     for (uint16_t x = 0; x< 300; x++) {
-      ((TeensyDisplay *)g_display)->drawNextPixel( x <= volCutoff ? 0xFFFF : 0x0010 );
+      ((TeensyDisplay *)g_display)->drawPixel( x, y, x <= volCutoff ? 0xFFFF : 0x0010 );
     }
   }
 }
