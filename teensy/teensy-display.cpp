@@ -9,8 +9,8 @@
 
 #include "ILI9341_t3.h"
 
-#define TFT_CS 24
-#define TFT_DC 20
+#define TFT_CS 10
+#define TFT_DC 9
 #define TFT_RST 255
 #define TFT_MOSI 11
 #define TFT_SCLK 13
@@ -112,8 +112,6 @@ void TeensyDisplay::drawPixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint
 
 void TeensyDisplay::blit(AiieRect r)
 {
-  static bool didStart = false;
-
   #define HOFFSET 18
   #define VOFFSET 13
 
@@ -121,6 +119,11 @@ void TeensyDisplay::blit(AiieRect r)
   uint8_t *videoBuffer = g_vm->videoBuffer; // FIXME: poking deep
 
   uint16_t pixel;
+
+  display.setAddrWindow(r.left+HOFFSET, r.top+VOFFSET, 
+			r.right+HOFFSET, r.bottom+VOFFSET);
+
+
   for (uint8_t y=r.top; y<=r.bottom; y++) {
     for (uint16_t x=r.left; x<=r.right; x++) {
       pixel = y * (DISPLAYRUN >> 1) + (x >> 1);
@@ -130,20 +133,17 @@ void TeensyDisplay::blit(AiieRect r)
       } else {
 	colorIdx = videoBuffer[pixel] & 0x0F;
       }
-      display.drawPixel(x+HOFFSET, y+VOFFSET, loresPixelColors[colorIdx]);
+      display.pushColor(loresPixelColors[colorIdx]);
     }
   }
 
   // draw overlay, if any
-#if 0
   if (overlayMessage[0]) {
-    // reset the viewport in order to draw the overlay...
-    LCD_Write_COM_DATA(0x45, 0);
-    LCD_Write_COM_DATA(0x46, 319);
-  
-    drawString(M_SELECTDISABLED, 1, 240 - 16 - 12, overlayMessage);
+    display.setTextColor(ILI9341_YELLOW, ILI9341_BLACK);
+    display.setTextSize(2);
+    display.setCursor(1, 240 - 16 - 12);
+    display.println(overlayMessage);
   }
-#endif
 }
 
 void TeensyDisplay::drawCharacter(uint8_t mode, uint16_t x, uint8_t y, char c)
