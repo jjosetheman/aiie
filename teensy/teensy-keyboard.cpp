@@ -44,7 +44,7 @@ TeensyKeyboard::TeensyKeyboard(VMKeyboard *k) : PhysicalKeyboard(k)
   leftApplePressed = false;
   rightApplePressed = false;
 
-  Serial4.begin(9600, SERIAL_8N1);
+  //  Serial1.begin(9600, SERIAL_8N1);
 
   numPressed = 0;
 }
@@ -192,11 +192,13 @@ int8_t TeensyKeyboard::read()
 void TeensyKeyboard::maintainKeyboard()
 {
   /* Check the HC05 */
-  if (Serial4.available()) {
-    int key = Serial4.read();
+#if 0
+  if (Serial1.available()) {
+    int key = Serial1.read();
     vmkeyboard->keyDepressed(key);
     vmkeyboard->keyReleased(key);
   }
+#endif
 
   // For debugging: also allow USB serial to act as a keyboard
   if (Serial.available()) {
