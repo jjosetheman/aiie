@@ -247,6 +247,13 @@ uint8_t AppleMMU::read(uint16_t address)
     updateMemoryPages();
   }
 
+  if (readPages[address >> 8] >= 140 && !g_inInterrupt) {
+    Serial.print("!r 0x");
+    Serial.print(address, HEX);
+    Serial.print(" p ");
+    Serial.println(readPages[address >> 8]);
+    delay(1000);
+  }
   uint8_t res = g_ram.readByte((readPages[address >> 8] << 8) | (address & 0xFF));
   return res;
 }
@@ -255,6 +262,11 @@ uint8_t AppleMMU::read(uint16_t address)
 uint8_t AppleMMU::readDirect(uint16_t address, uint8_t fromPage)
 {
   uint16_t page = _pageNumberForRam(address >> 8, fromPage);
+
+  if (page >= 140 && !g_inInterrupt) {
+    Serial.print("!R 0x");
+    Serial.println(address, HEX);
+  }
 
   return g_ram.readByte((page << 8) | (address & 0xFF));
 }
@@ -273,6 +285,11 @@ void AppleMMU::write(uint16_t address, uint8_t v)
   // Bank-switched ROM/RAM areas
   if (address >= 0xD000 && address <= 0xFFFF && !writebsr) {
     return;
+  }
+
+  if (writePages[address >> 8] >= 140 && !g_inInterrupt) {
+    Serial.print("!w 0x");
+    Serial.println(address, HEX);
   }
 
   g_ram.writeByte((writePages[address >> 8] << 8) | (address & 0xFF), v);
