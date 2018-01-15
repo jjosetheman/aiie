@@ -23,3 +23,4 @@ extern VMui *g_ui;
 extern int16_t g_volume;
 extern uint8_t g_displayType;
 extern VMRam g_ram;
+extern bool g_inInterrupt;

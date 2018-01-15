@@ -2,6 +2,7 @@
 #include "teensy-keyboard.h"
 #include <Keypad.h>
 #include "LRingBuffer.h"
+#include <SoftwareSerial.h>
 
 const byte ROWS = 5;
 const byte COLS = 13;
@@ -14,9 +15,6 @@ char keys[ROWS][COLS] = {
   { LOCK, '`', TAB, '\\', LA, ' ', RA, LARR, RARR, DARR, UARR, 0, 0 }
 };
 
-uint8_t rowsPins[ROWS] = { 33, 34, 35, 36, 37 };
-uint8_t colsPins[COLS] = { 0, 1, 3, 4, 24, 25, 26, 27, 28, 29, 30, 31, 32 };
-Keypad keypad(makeKeymap(keys), rowsPins, colsPins, ROWS, COLS);
 LRingBuffer buffer(10); // 10 keys should be plenty, right?
 
 static uint8_t shiftedNumber[] = { '<', // ,
@@ -39,14 +37,14 @@ static uint8_t shiftedNumber[] = { '<', // ,
 
 TeensyKeyboard::TeensyKeyboard(VMKeyboard *k) : PhysicalKeyboard(k)
 {
-  keypad.setDebounceTime(5);
-
   leftShiftPressed = false;
   rightShiftPressed = false;
   ctrlPressed = false;
   capsLock = true;
   leftApplePressed = false;
   rightApplePressed = false;
+
+  Serial4.begin(9600, SERIAL_8N1);
 
   numPressed = 0;
 }
@@ -172,24 +170,6 @@ void TeensyKeyboard::releasedKey(uint8_t key)
 
 bool TeensyKeyboard::kbhit()
 {
-  if (keypad.getKeys()) {
-    for (int i=0; i<LIST_MAX; i++) {
-      if ( keypad.key[i].stateChanged ) {
-        switch (keypad.key[i].kstate) {
-	case PRESSED:
-	  pressedKey(keypad.key[i].kchar);
-	  break;
-	case RELEASED:
-	  releasedKey(keypad.key[i].kchar);
-	  break;
-	case HOLD:
-	case IDLE:
-	  break;
-	}
-      }
-    }
-  }
-
   // For debugging: also allow USB serial to act as a keyboard
   if (Serial.available()) {
     buffer.addByte(Serial.read());
@@ -211,22 +191,11 @@ int8_t TeensyKeyboard::read()
 // by the VM.
 void TeensyKeyboard::maintainKeyboard()
 {
-  if (keypad.getKeys()) {
-    for (int i=0; i<LIST_MAX; i++) {
-      if ( keypad.key[i].stateChanged ) {
-        switch (keypad.key[i].kstate) {
-	case PRESSED:
-	  vmkeyboard->keyDepressed(keypad.key[i].kchar);
-	  break;
-	case RELEASED:
-	  vmkeyboard->keyReleased(keypad.key[i].kchar);
-	  break;
-	case HOLD:
-	case IDLE:
-	  break;
-	}
-      }
-    }
+  /* Check the HC05 */
+  if (Serial4.available()) {
+    int key = Serial4.read();
+    vmkeyboard->keyDepressed(key);
+    vmkeyboard->keyReleased(key);
   }
 
   // For debugging: also allow USB serial to act as a keyboard

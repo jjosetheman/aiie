@@ -1,15 +1,32 @@
+#include <Arduino.h>
+
 #include "vmram.h"
 #include <string.h>
 #include "globals.h"
 
+#include "parallelsram.h"
+
 #ifndef TEENSYDUINO
 #include <assert.h>
 #else
-#define assert(x)
+#define assert(x) { if (!(x)) {Serial.print("assertion failed at "); Serial.println(__LINE__); delay(10000);} }
+//#define assert(x) { }
 #endif
 
 // Serializing token for RAM data
 #define RAMMAGIC 'R'
+
+ParallelSRAM sram;
+
+void initRamChip()
+{
+  // 256k RAM chip; initialize memory to 0
+  for (int i=0; i<256*1024; i++) {
+    sram.write(i, 0x00);
+  }
+
+  Serial.println("init'd");
+}
 
 VMRam::VMRam() {memset(preallocatedRam, 0, sizeof(preallocatedRam)); }
 
@@ -17,14 +34,41 @@ VMRam::~VMRam() { }
 
 void VMRam::init()
 {
+  initRamChip();
+
+#if 1
+  Test();
+#endif
+
   for (uint32_t i=0; i<sizeof(preallocatedRam); i++) {
     preallocatedRam[i] = 0;
   }
 }
 
-uint8_t VMRam::readByte(uint32_t addr) { assert(addr < sizeof(preallocatedRam)); return preallocatedRam[addr]; }
+uint8_t VMRam::readByte(uint32_t addr) 
+{
+  if (addr >= sizeof(preallocatedRam)) {
+    if (!g_inInterrupt) {
+      Serial.print("!r 0x");
+      Serial.println(addr, HEX);
+    }
 
-void VMRam::writeByte(uint32_t addr, uint8_t value) { assert(addr < sizeof(preallocatedRam)); preallocatedRam[addr] = value; }
+    uint8_t rv = sram.read(addr - sizeof(preallocatedRam));
+    return rv;
+  }
+
+  return preallocatedRam[addr]; 
+}
+
+void VMRam::writeByte(uint32_t addr, uint8_t value)
+{ 
+  if (addr >= sizeof(preallocatedRam)) {
+    sram.write(addr - sizeof(preallocatedRam), value);
+    return;
+  }
+
+  preallocatedRam[addr] = value;
+}
 
 bool VMRam::Serialize(int8_t fd)
 {
@@ -37,6 +81,10 @@ bool VMRam::Serialize(int8_t fd)
 
   for (uint32_t pos = 0; pos < sizeof(preallocatedRam); pos++) {
     g_filemanager->writeByte(fd, preallocatedRam[pos]);
+  }
+
+  for (uint32_t pos = 0; pos < 262144; pos++) {
+    g_filemanager->writeByte(fd, sram.read(pos));
   }
 
   g_filemanager->writeByte(fd, RAMMAGIC);
@@ -67,9 +115,45 @@ bool VMRam::Deserialize(int8_t fd)
     preallocatedRam[pos] = g_filemanager->readByte(fd);
   }
 
+  for (uint32_t pos = 0; pos < 262144; pos++) {
+    sram.write(pos, g_filemanager->readByte(fd));
+  }
+
   if (g_filemanager->readByte(fd) != RAMMAGIC) {
     return false;
   }
+
+  return true;
+}
+
+bool VMRam::Test()
+{
+  // external SRAM check.
+  // Use preallocatedRam[] as a buffer; fill it with random data, 
+  // copy that to the SRAM, and verify (in a different order).
+  uint32_t errcount = 0;
+  static char buf[256];
+
+  sram.SetPins(); // testing: does resetting the pins fix the problems?
+
+  for (int i=0; i<sizeof(preallocatedRam); i++) {
+    preallocatedRam[i] = random(0, 255);
+    sram.write(i, preallocatedRam[i]);
+  }
+  
+  for (int i=sizeof(preallocatedRam)-1; i>=0; i--) {
+    uint8_t v = sram.read(i);
+    if (v !=preallocatedRam[i]) {
+
+      sprintf(buf, "Verifying failed for 0x%X == %X [expected %X]", i, v, preallocatedRam[i]);
+      Serial.println(buf);
+      errcount++;
+      delay(1000);
+    }
+  }
+  sprintf(buf, "  Verify complete: %d error%s",
+          errcount, errcount == 1 ? "" : "s");
+  Serial.println(buf);
 
   return true;
 }

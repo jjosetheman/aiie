@@ -5,7 +5,8 @@
 #include "physicaldisplay.h"
 
 #include "SPI.h"
-#include "ILI9341_t3.h"
+#define ENABLE_ILI9341_FRAMEBUFFER
+#include "ILI9341_t3n.h"
 
 #define TEENSY_DHEIGHT 240
 #define TEENSY_DWIDTH 320

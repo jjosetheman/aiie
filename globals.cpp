@@ -12,3 +12,4 @@ VMui *g_ui;
 int16_t g_volume = 15;
 uint8_t g_displayType = 3; // FIXME m_perfectcolor
 VMRam g_ram;
+bool g_inInterrupt = false;

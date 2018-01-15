@@ -7,16 +7,15 @@
 #include "globals.h"
 #include "applevm.h"
 
-#include "ILI9341_t3.h"
+#include <SPIN.h>
 
-#define TFT_CS 10
-#define TFT_DC 9
-#define TFT_RST 255
-#define TFT_MOSI 11
-#define TFT_SCLK 13
-#define TFT_MISO 12
-
-ILI9341_t3 display = ILI9341_t3(TFT_CS, TFT_DC, TFT_RST, TFT_MOSI, TFT_SCLK, TFT_MISO);
+#define TFT_DC 55 // 43, 55 // 0xe4
+#define TFT_CS 42 //42, 57 // 0xe5
+#define TFT_SCK 46 //46, 53 //0xe2
+#define TFT_MISO 51 //45, 51 // 0xe3
+#define TFT_MOSI 52 // 44,52 // 0xe1
+#define TFT_RESET 54 // 8?
+ILI9341_t3n display = ILI9341_t3n(TFT_CS, TFT_DC, TFT_RESET, TFT_MOSI, TFT_SCK, TFT_MISO, &SPIN2);
 
 // RGB map of each of the lowres colors
 const uint16_t loresPixelColors[16] = { 0x0000, // 0 black
@@ -42,6 +41,7 @@ TeensyDisplay::TeensyDisplay()
   selectedColor = 0x0000;
 
   display.begin();
+  display.useFrameBuffer(true);
   display.setRotation(3);
 
   // LCD initialization complete
@@ -52,6 +52,7 @@ TeensyDisplay::TeensyDisplay()
 
   driveIndicator[0] = driveIndicator[1] = false;
   driveIndicatorDirty = true;
+  display.updateScreenAsync(true);
 }
 
 TeensyDisplay::~TeensyDisplay()
@@ -61,7 +62,7 @@ TeensyDisplay::~TeensyDisplay()
 void TeensyDisplay::redraw()
 {
   g_ui->drawStaticUIElement(UIeOverlay);
-
+    
   if (g_vm) {
     g_ui->drawOnOffUIElement(UIeDisk1_state, ((AppleVM *)g_vm)->DiskName(0)[0] == '\0');
     g_ui->drawOnOffUIElement(UIeDisk2_state, ((AppleVM *)g_vm)->DiskName(1)[0] == '\0');
@@ -120,8 +121,8 @@ void TeensyDisplay::blit(AiieRect r)
 
   uint16_t pixel;
 
-  display.setAddrWindow(r.left+HOFFSET, r.top+VOFFSET, 
-			r.right+HOFFSET, r.bottom+VOFFSET);
+  /*  display.setAddrWindow(r.left+HOFFSET, r.top+VOFFSET, 
+      r.right+HOFFSET, r.bottom+VOFFSET);*/
 
 
   for (uint8_t y=r.top; y<=r.bottom; y++) {
@@ -133,7 +134,8 @@ void TeensyDisplay::blit(AiieRect r)
       } else {
 	colorIdx = videoBuffer[pixel] & 0x0F;
       }
-      display.pushColor(loresPixelColors[colorIdx]);
+      display.drawPixel(x+HOFFSET, y+VOFFSET, loresPixelColors[colorIdx]);
+      //      display.pushColor(loresPixelColors[colorIdx]);
     }
   }
 
@@ -144,6 +146,12 @@ void TeensyDisplay::blit(AiieRect r)
     display.setCursor(1, 240 - 16 - 12);
     display.println(overlayMessage);
   }
+
+#if 0
+  if (!display.asyncUpdateActive()) {
+    display.updateScreenAsync(false);
+  }
+#endif
 }
 
 void TeensyDisplay::drawCharacter(uint8_t mode, uint16_t x, uint8_t y, char c)
