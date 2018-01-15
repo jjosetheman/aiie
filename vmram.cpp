@@ -36,7 +36,7 @@ void VMRam::init()
 {
   initRamChip();
 
-#if 1
+#if 0
   Test();
 #endif
 
@@ -48,11 +48,6 @@ void VMRam::init()
 uint8_t VMRam::readByte(uint32_t addr) 
 {
   if (addr >= sizeof(preallocatedRam)) {
-    if (!g_inInterrupt) {
-      Serial.print("!r 0x");
-      Serial.println(addr, HEX);
-    }
-
     uint8_t rv = sram.read(addr - sizeof(preallocatedRam));
     return rv;
   }
@@ -128,6 +123,7 @@ bool VMRam::Deserialize(int8_t fd)
 
 bool VMRam::Test()
 {
+  Serial.println("Executing external SRAM test");
   // external SRAM check.
   // Use preallocatedRam[] as a buffer; fill it with random data, 
   // copy that to the SRAM, and verify (in a different order).
