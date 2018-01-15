@@ -43,7 +43,7 @@ class VMRam {
   // Pages 0-3 are ZP; we want those in RAM.
   // Pages 4-7 are 0x200 - 0x3FF. We want those in RAM too (text pages).
   //  uint8_t preallocatedRam[16*256];
-  uint8_t preallocatedRam[80*256];
+  uint8_t preallocatedRam[140*256];
 };
 
 
