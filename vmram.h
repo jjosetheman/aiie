@@ -42,8 +42,11 @@ class VMRam {
 
   // Pages 0-3 are ZP; we want those in RAM.
   // Pages 4-7 are 0x200 - 0x3FF. We want those in RAM too (text pages).
-  //  uint8_t preallocatedRam[16*256];
+#ifdef TEENSYDUINO
   uint8_t preallocatedRam[140*256];
+#else
+  uint8_t preallocatedRam[591*256];
+#endif
 };
 
 

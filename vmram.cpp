@@ -1,10 +1,14 @@
+#ifdef TEENSYDUINO
 #include <Arduino.h>
+#endif
 
 #include "vmram.h"
 #include <string.h>
 #include "globals.h"
 
+#ifdef TEENSYDUINO
 #include "parallelsram.h"
+#endif
 
 #ifndef TEENSYDUINO
 #include <assert.h>
@@ -16,16 +20,20 @@
 // Serializing token for RAM data
 #define RAMMAGIC 'R'
 
+#ifdef TEENSYDUINO
 ParallelSRAM sram;
+#endif
 
 void initRamChip()
 {
+#ifdef TEENSYDUINO
   // 256k RAM chip; initialize memory to 0
   for (int i=0; i<256*1024; i++) {
     sram.write(i, 0x00);
   }
 
   Serial.println("init'd");
+#endif
 }
 
 VMRam::VMRam() {memset(preallocatedRam, 0, sizeof(preallocatedRam)); }
@@ -47,20 +55,23 @@ void VMRam::init()
 
 uint8_t VMRam::readByte(uint32_t addr) 
 {
+#ifdef TEENSYDUINO
   if (addr >= sizeof(preallocatedRam)) {
     uint8_t rv = sram.read(addr - sizeof(preallocatedRam));
     return rv;
   }
-
+#endif
   return preallocatedRam[addr]; 
 }
 
 void VMRam::writeByte(uint32_t addr, uint8_t value)
 { 
+#ifdef TEENSYDUINO
   if (addr >= sizeof(preallocatedRam)) {
     sram.write(addr - sizeof(preallocatedRam), value);
     return;
   }
+#endif
 
   preallocatedRam[addr] = value;
 }
@@ -78,9 +89,11 @@ bool VMRam::Serialize(int8_t fd)
     g_filemanager->writeByte(fd, preallocatedRam[pos]);
   }
 
+#ifdef TEENSYDUINO
   for (uint32_t pos = 0; pos < 262144; pos++) {
     g_filemanager->writeByte(fd, sram.read(pos));
   }
+#endif
 
   g_filemanager->writeByte(fd, RAMMAGIC);
 
@@ -110,9 +123,11 @@ bool VMRam::Deserialize(int8_t fd)
     preallocatedRam[pos] = g_filemanager->readByte(fd);
   }
 
+#ifdef TEENSYDUINO
   for (uint32_t pos = 0; pos < 262144; pos++) {
     sram.write(pos, g_filemanager->readByte(fd));
   }
+#endif
 
   if (g_filemanager->readByte(fd) != RAMMAGIC) {
     return false;
@@ -123,6 +138,7 @@ bool VMRam::Deserialize(int8_t fd)
 
 bool VMRam::Test()
 {
+#ifdef TEENSYDUINO
   Serial.println("Executing external SRAM test");
   // external SRAM check.
   // Use preallocatedRam[] as a buffer; fill it with random data, 
@@ -150,6 +166,6 @@ bool VMRam::Test()
   sprintf(buf, "  Verify complete: %d error%s",
           errcount, errcount == 1 ? "" : "s");
   Serial.println(buf);
-
+#endif
   return true;
 }
